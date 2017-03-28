@@ -1,3 +1,5 @@
+#各种语言的.gitignore, https://github.com/github/gitignore
+
 #忽略 1.不指定文件名的可执行文件
 *.out
 
