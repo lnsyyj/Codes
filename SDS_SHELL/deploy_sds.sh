@@ -16,6 +16,10 @@ CEPH_CLUSTER_IP=(192.168.100.98 192.168.100.99 192.168.100.100 192.168.100.101)
 
 function install_dependent(){
 	sudo yum install -y wget expect curl
+        curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+        python get-pip.py
+        python -m pip install -U pip
+        pip install --upgrade setuptools
 }
 
 function modify_hosts_file(){
