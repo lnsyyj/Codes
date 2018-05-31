@@ -104,6 +104,6 @@ sleep 130
 deploy_ceph_cluster
 
 ENDTIME=`date +'%Y-%m-%d %H:%M:%S'`
-START_SECONDS=$(date --date="$starttime" +%s)
-END_SECONDS=$(date --date="$endtime" +%s)
-echo "本次运行时间： "$((START_SECONDS-END_SECONDS))"s"
+START_SECONDS=$(date --date="${STARTTIME}" +%s)
+END_SECONDS=$(date --date="${ENDTIME}" +%s)
+echo "本次运行时间： "$((END_SECONDS-START_SECONDS))"s"
