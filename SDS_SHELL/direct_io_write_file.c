@@ -25,7 +25,7 @@ int main(int argc, char * argv[])
     }
  
     memset(buf, 'c', BUF_SIZE);
-    fd = open("./direct_io.data", O_WRONLY | O_DIRECT | O_CREAT, 0755);
+    fd = open("./direct_io.data", O_WRONLY | O_SYNC | O_DIRECT | O_CREAT, 0755);
     if (fd < 0){
         perror("open ./direct_io.data failed");
         exit(1);
