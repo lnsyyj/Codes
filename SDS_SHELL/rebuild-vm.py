@@ -21,7 +21,7 @@ import logger
 #logs = setup_logger("global log", "./rebuild.py.log", level=logging.DEBUG, format=True)
 
 SDS_VM_LIST = ["avodev-controller", "avodev-ceph-1", "avodev-ceph-2", "avodev-ceph-3", "avodev-ceph-4"]
-SDS_VM_TEMPLATE_PREFIX =  "2018-06-21-IPv6-auto-"
+SDS_VM_TEMPLATE_PREFIX =  "2018-06-22-IPv6-auto-"
 
 def check_existence_vm(vm_name):
 	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"list vms --query name=\"" + vm_name + "\"\" | grep -v oVirt"
@@ -29,20 +29,26 @@ def check_existence_vm(vm_name):
 	status, result = commands.getstatusoutput(cmd)
 	print result
 	if result == "":
-		return 0
+		return False
 	else:
-		return 1
+		return True
 
 def check_vm_status(vm_name, expected_state):
 	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"show vm " + vm_name + "\" | grep status-state | awk '{print $3}'"
 	print cmd
-	while 1:
+	fun_status = False
+	start_time = long(time.time())
+	while True:
 		status, result = commands.getstatusoutput(cmd)
 		print vm_name + " : " + result
 		time.sleep(2)
 		if result == expected_state:
+			fun_status = True
 			break
-	return result
+		if long(time.time()) - start_time >= 240:
+			fun_status = False
+			break
+	return fun_status
 
 def up_vm(vm_name):
 	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"action vm " + vm_name + " start\""
@@ -68,43 +74,41 @@ def create_vm(vm_name):
 	status, result = commands.getstatusoutput(cmd)
 	print result
 
+def check_vm_start(vm_start_status_list = []):
+	result = True
+	print str(vm_start_status_list)
+	for x in vm_start_status_list:
+		if x == False:
+			result = False
+	return result
 
 def process():
-	# delete vms	
-	for x in SDS_VM_LIST:
-		result = check_existence_vm(x)
-		if result == 1:
-			down_vm(x)
+	
+	vm_start_result = False
+
+	while True:
+		vm_start_status = []
+		# delete vms	
+		for x in SDS_VM_LIST:
+			result = check_existence_vm(x)
+			if result == True:
+				down_vm(x)
+				check_vm_status(x,"down")
+				delete_vm(x)
+
+		# create vms
+		for x in SDS_VM_LIST:
+			create_vm(x)
 			check_vm_status(x,"down")
-			delete_vm(x)
 
-	# create vms
-	for x in SDS_VM_LIST:
-		create_vm(x)
-		check_vm_status(x,"down")
+		# up vms
+		for x in SDS_VM_LIST:
+			up_vm(x)
+			vm_start_status.append(check_vm_status(x,"up"))
 
-	# up vms
-	for x in SDS_VM_LIST:
-		up_vm(x)
-		check_vm_status(x,"up")
-
-	# if result == 0:
-	# 	print "+++++++create vm"
-	# else:
-	# 	print "shutdown vm"
-	# 	print "check_vm_status"
-	# 	print "delete vm"
-
-
-
+		vm_start_result = check_vm_start(vm_start_status)
+		if vm_start_result == True:
+			break
 
 if __name__ == '__main__':
-
 	process()
-
-	# check_existence_vm("avodev-controller")
-	# down_vm("avodev-controller")
-	# check_vm_status("avodev-controller", "down")
-
-	# up_vm("avodev-controller")
-	# check_vm_status("avodev-controller", "up")
