@@ -16,7 +16,7 @@ CEPH_MANAGER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222
 
 
 function install_dependent(){
-	sudo yum install -y wget expect curl
+	sudo yum install -y net-tools wget expect curl
         curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
         python get-pip.py
         python -m pip install -U pip
