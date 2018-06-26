@@ -21,7 +21,7 @@ import logger
 #logs = setup_logger("global log", "./rebuild.py.log", level=logging.DEBUG, format=True)
 
 SDS_VM_LIST = ["avodev-controller", "avodev-ceph-1", "avodev-ceph-2", "avodev-ceph-3", "avodev-ceph-4"]
-SDS_VM_TEMPLATE_PREFIX =  "2018-06-22-IPv6-auto-"
+SDS_VM_TEMPLATE_PREFIX =  "2018-06-25-IPv6-auto-"
 
 def check_existence_vm(vm_name):
 	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"list vms --query name=\"" + vm_name + "\"\" | grep -v oVirt"

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IP=`/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6 | awk '{print $2}' | tr -d "addr:"`
+# IP=`/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6 | awk '{print $2}' | tr -d "addr:"`
 HOSTNAME=`hostname -f`
 
 SDS_PKG_URL="http://files.tclab.lenovo.com/builds/daily/thinkcloud_sds/TCS_nfvi/"
@@ -16,7 +16,7 @@ CEPH_MANAGER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222
 
 
 function install_dependent(){
-	sudo yum install -y net-tools wget expect curl
+	sudo yum install -y wget expect curl
         curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
         python get-pip.py
         python -m pip install -U pip
@@ -39,8 +39,11 @@ function download_sds(){
 	wget ${SDS_PKG_URL}${SDS_TAR_PKG}
 }
 
-function uzip_and_install_sds(){
+function uzip_sds_pkg(){
 	tar zxvf ${SDS_TAR_PKG}
+}
+
+function install_sds(){
 	pushd deployment
 	
 	expect -c "
@@ -93,8 +96,9 @@ STARTTIME=`date +'%Y-%m-%d %H:%M:%S'`
 #modify_hosts_file
 #modify_dns
 # install_dependent
-download_sds
-uzip_and_install_sds
+# download_sds
+# uzip_sds_pkg
+install_sds
 sleep 5
 put_license
 #sleep 5
