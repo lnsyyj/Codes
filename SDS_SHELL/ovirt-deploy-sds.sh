@@ -8,7 +8,7 @@ SDS_TAR_PKG="deployment-standalone-daily_20180616_47_py.tar.gz"
 
 CEPH_NODE_HOST_USER="root"
 CEPH_NODE_HOST_PASSWORD="1234567890"
-
+CEPH_CONTROLLER_IP="2008:20c:20c:20c:20c:29ff:0:220"
 CEPH_NODE_NAME=(avodev-ceph-1 avodev-ceph-2 avodev-ceph-3 avodev-ceph-4)
 CEPH_PUBLIC_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223 2008:20c:20c:20c:20c:29ff:0:224)
 CEPH_CLUSTER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223 2008:20c:20c:20c:20c:29ff:0:224)
@@ -48,7 +48,7 @@ function install_sds(){
 	
 	expect -c "
 	set timeout 2000
-	spawn ./standalone-setup.sh install
+	spawn ./standalone-setup.sh install -ipv6
 	expect {
 		\"*Please enter the mysql root password*\" { send \"SDS_Passw0rd\r\";exp_continue }
 		\"*Please enter the zabbix db user zabbix* password\" { send \"SDS_Passw0rd\r\";exp_continue }
@@ -59,6 +59,15 @@ function install_sds(){
 	}
 	expect eof
 	"
+	popd
+}
+
+function conf_ha() {
+	pushd deployment/ha_config
+	sed -i "s/\(ManageNetwork=\).*/\1\"2008:20c:20c:20c:20c:29ff:0:220\"/g" install_config
+	sed -i "s/\(PublicNetwork=\).*/\1\"2008:20c:20c:20c:20c:29ff:0:220\"/g" install_config
+	cat install_config
+	./all_in_one.sh
 	popd
 }
 
@@ -98,15 +107,18 @@ STARTTIME=`date +'%Y-%m-%d %H:%M:%S'`
 # install_dependent
 # download_sds
 # uzip_sds_pkg
+
 install_sds
 sleep 5
+conf_ha
+sleep 5
 put_license
-#sleep 5
-#create_ceph_cluster
-#sleep 5
-#add_host_to_cluster
-#sleep 130
-# deploy_ceph_cluster
+sleep 5
+create_ceph_cluster
+sleep 5
+add_host_to_cluster
+sleep 130
+deploy_ceph_cluster
 
 ENDTIME=`date +'%Y-%m-%d %H:%M:%S'`
 START_SECONDS=$(date --date="${STARTTIME}" +%s)
