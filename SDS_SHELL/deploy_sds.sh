@@ -4,7 +4,7 @@ IP=`/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6 | awk '{print $2
 HOSTNAME=`hostname -f`
 
 SDS_PKG_URL="http://******/builds/daily/thinkcloud_sds/master/"
-SDS_TAR_PKG="******.tar.gz"
+SDS_TAR_PKG="deployment-standalone-daily_20180619_1.tar.gz"
 
 CEPH_NODE_HOST_USER="root"
 CEPH_NODE_HOST_PASSWORD="1234567890"
@@ -12,6 +12,7 @@ CEPH_NODE_HOST_PASSWORD="1234567890"
 CEPH_NODE_NAME=(plana010 plana011 plana012 plana013)
 CEPH_PUBLIC_IP=(192.168.100.98 192.168.100.99 192.168.100.100 192.168.100.101)
 CEPH_CLUSTER_IP=(192.168.100.98 192.168.100.99 192.168.100.100 192.168.100.101)
+CEPH_MANAGER_IP=(192.168.100.98 192.168.100.99 192.168.100.100 192.168.100.101)
 
 
 function install_dependent(){
@@ -78,7 +79,7 @@ function add_host_to_cluster(){
 	LEN=${#CEPH_NODE_NAME[@]}
 	for ((i=0; i<${LEN}; i++))
 	do
-		cephmgmtclient create-server --id 1 --name ${CEPH_NODE_NAME[${i}]} --publicip ${CEPH_PUBLIC_IP[${i}]} --clusterip ${CEPH_CLUSTER_IP[${i}]} --server_user ${CEPH_NODE_HOST_USER} --server_pass ${CEPH_NODE_HOST_PASSWORD} --rack_id 1
+		cephmgmtclient create-server --id 1 --name ${CEPH_NODE_NAME[${i}]} --publicip ${CEPH_PUBLIC_IP[${i}]} --clusterip ${CEPH_CLUSTER_IP[${i}]} --managerip ${CEPH_MANAGER_IP[${i}]}  --server_user ${CEPH_NODE_HOST_USER} --server_pass ${CEPH_NODE_HOST_PASSWORD} --rack_id 1
 	done
 }
 
@@ -89,18 +90,18 @@ function deploy_ceph_cluster(){
 
 STARTTIME=`date +'%Y-%m-%d %H:%M:%S'`
 
-modify_hosts_file
-modify_dns
-install_dependent
-download_sds
-uzip_and_install_sds
-sleep 5
-put_license
-sleep 5
-create_ceph_cluster
-sleep 5
-add_host_to_cluster
-sleep 130
+#modify_hosts_file
+#modify_dns
+#install_dependent
+#download_sds
+#uzip_and_install_sds
+#sleep 5
+#put_license
+#sleep 5
+#create_ceph_cluster
+#sleep 5
+#add_host_to_cluster
+#sleep 130
 deploy_ceph_cluster
 
 ENDTIME=`date +'%Y-%m-%d %H:%M:%S'`
