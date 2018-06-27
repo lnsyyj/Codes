@@ -7,10 +7,11 @@ COPY_LICENSE_FILE_NAME="ThinkCloud_Storage_license_trial_2018-01-29.zip"
 COPY_SDS_DEPLOY_SHELL_NAME="ovirt-deploy-sds.sh"
 
 SSH_KNOWN_HOSTS_PATH="/root/.ssh/known_hosts"
-#DATE=`date +"%Y%m%d"`
-DATE="20180622"
 SDS_PKG_URL="http://10.120.16.212/build/tcs_nfvi_centos7.5/"
 SDS_PKG_NAME=$(curl http://10.120.16.212/build/tcs_nfvi_centos7.5/ | grep $(date +"%Y%m%d") | tail -1 | sed 's/.*\(deployment-standalone-daily_[0-9]*_[0-9]*.tar.gz\).*/\1/')
+
+#DATE=`date +"%Y%m%d"`
+DATE="20180622"
 
 function copy_ssh_rsa_pub() {
         LEN=${#COPY_SSH_RSA_PUB_NODE[@]}
@@ -44,7 +45,7 @@ function sds_temp_release_address() {
         scp "root@10.100.47.161:/home/release/deployment-standalone-daily_${DATE}_1.tar.gz" /tmp/
 }
 
-function sds_copy_release_pkg() {
+function sds_temp_copy_release_pkg() {
         scp "/tmp/deployment-standalone-daily_${DATE}_1.tar.gz" "root@${COPY_SDS_DEPLOY_SHELL_NODE}:/root/"
 }
 
@@ -68,7 +69,7 @@ delete_ssh_known_hosts
 copy_ssh_rsa_pub
 copy_shell_and_license_file_to_controller
 # sds_temp_release_address
-# sds_copy_release_pkg
+# sds_temp_copy_release_pkg
 remote_down_pkg
 sds_pkg_uzip
 sds_install_dependent

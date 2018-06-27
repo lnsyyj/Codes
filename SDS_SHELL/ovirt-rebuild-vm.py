@@ -21,10 +21,11 @@ import logger
 #logs = setup_logger("global log", "./rebuild.py.log", level=logging.DEBUG, format=True)
 
 SDS_VM_LIST = ["avodev-controller", "avodev-ceph-1", "avodev-ceph-2", "avodev-ceph-3", "avodev-ceph-4"]
-SDS_VM_TEMPLATE_PREFIX =  "2018-06-25-IPv6-auto-"
+SDS_VM_TEMPLATE_PREFIX = "2018-06-25-IPv6-auto-"
+OVIRT_CONTROLLER_IP = "192.168.100.59"
 
 def check_existence_vm(vm_name):
-	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"list vms --query name=\"" + vm_name + "\"\" | grep -v oVirt"
+	cmd = "ovirt-shell -l https://" + OVIRT_CONTROLLER_IP + "/tchyp-engine/api -u admin@internal -I --execute-command=\"list vms --query name=\"" + vm_name + "\"\" | grep -v oVirt"
 	print cmd
 	status, result = commands.getstatusoutput(cmd)
 	print result
@@ -34,7 +35,7 @@ def check_existence_vm(vm_name):
 		return True
 
 def check_vm_status(vm_name, expected_state):
-	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"show vm " + vm_name + "\" | grep status-state | awk '{print $3}'"
+	cmd = "ovirt-shell -l https://" + OVIRT_CONTROLLER_IP + "/tchyp-engine/api -u admin@internal -I --execute-command=\"show vm " + vm_name + "\" | grep status-state | awk '{print $3}'"
 	print cmd
 	fun_status = False
 	start_time = long(time.time())
@@ -51,25 +52,25 @@ def check_vm_status(vm_name, expected_state):
 	return fun_status
 
 def up_vm(vm_name):
-	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"action vm " + vm_name + " start\""
+	cmd = "ovirt-shell -l https://" + OVIRT_CONTROLLER_IP + "/tchyp-engine/api -u admin@internal -I --execute-command=\"action vm " + vm_name + " start\""
 	print cmd
 	status, result = commands.getstatusoutput(cmd)
 	print result
 
 def down_vm(vm_name):
-	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"action vm " + vm_name + " shutdown\""
+	cmd = "ovirt-shell -l https://" + OVIRT_CONTROLLER_IP + "/tchyp-engine/api -u admin@internal -I --execute-command=\"action vm " + vm_name + " shutdown\""
 	print cmd
 	status, result = commands.getstatusoutput(cmd)
 	print result
 
 def delete_vm(vm_name):
-	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"action vm " + vm_name + " delete\""
+	cmd = "ovirt-shell -l https://" + OVIRT_CONTROLLER_IP + "/tchyp-engine/api -u admin@internal -I --execute-command=\"action vm " + vm_name + " delete\""
 	print cmd
 	status, result = commands.getstatusoutput(cmd)
 	print result
 
 def create_vm(vm_name):
-	cmd = "ovirt-shell -l https://192.168.100.59/tchyp-engine/api -u admin@internal -I --execute-command=\"add vm --name "  + vm_name + " --template-name " + SDS_VM_TEMPLATE_PREFIX + vm_name + " " + "--cluster-name Default\""
+	cmd = "ovirt-shell -l https://" + OVIRT_CONTROLLER_IP + "/tchyp-engine/api -u admin@internal -I --execute-command=\"add vm --name "  + vm_name + " --template-name " + SDS_VM_TEMPLATE_PREFIX + vm_name + " " + "--cluster-name Default\""
 	print cmd
 	status, result = commands.getstatusoutput(cmd)
 	print result

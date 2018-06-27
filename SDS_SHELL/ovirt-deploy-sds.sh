@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# IP=`/sbin/ifconfig -a|grep inet|grep -v 127.0.0.1|grep -v inet6 | awk '{print $2}' | tr -d "addr:"`
-HOSTNAME=`hostname -f`
-
-SDS_PKG_URL="http://files.tclab.lenovo.com/builds/daily/thinkcloud_sds/TCS_nfvi/"
-SDS_TAR_PKG="deployment-standalone-daily_20180616_47_py.tar.gz"
-
 CEPH_NODE_HOST_USER="root"
 CEPH_NODE_HOST_PASSWORD="1234567890"
 CEPH_CONTROLLER_IP="2008:20c:20c:20c:20c:29ff:0:220"
@@ -14,41 +8,12 @@ CEPH_PUBLIC_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 
 CEPH_CLUSTER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223 2008:20c:20c:20c:20c:29ff:0:224)
 CEPH_MANAGER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223 2008:20c:20c:20c:20c:29ff:0:224)
 
-
-function install_dependent(){
-	sudo yum install -y wget expect curl
-        curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-        python get-pip.py
-        python -m pip install -U pip
-        pip install --upgrade setuptools
-}
-
-function modify_hosts_file(){
-	if ! grep -q "${IP}.*api.inte.lenovo.com" /etc/hosts; then
-		echo "${IP}	api.inte.lenovo.com" >> /etc/hosts
-	fi
-}
-
-function modify_dns(){
-	if ! grep -q "nameserver.*10.96.1.18" /etc/resolv.conf; then
-		echo "nameserver 10.96.1.18" > /etc/resolv.conf
-	fi
-}
-
-function download_sds(){
-	wget ${SDS_PKG_URL}${SDS_TAR_PKG}
-}
-
-function uzip_sds_pkg(){
-	tar zxvf ${SDS_TAR_PKG}
-}
-
 function install_sds(){
 	pushd deployment
 	
 	expect -c "
 	set timeout 2000
-	spawn ./standalone-setup.sh install -ipv6
+	spawn ./standalone-setup.sh install -ipv6 -s
 	expect {
 		\"*Please enter the mysql root password*\" { send \"SDS_Passw0rd\r\";exp_continue }
 		\"*Please enter the zabbix db user zabbix* password\" { send \"SDS_Passw0rd\r\";exp_continue }
@@ -59,6 +24,7 @@ function install_sds(){
 	}
 	expect eof
 	"
+
 	popd
 }
 
@@ -73,9 +39,6 @@ function conf_ha() {
 
 function put_license(){
 	LOCAL_PATH=`pwd`
-	# TOKEN=`keystone token-get | grep "\ id" | awk '{print $4}'`
-	# curl -H "LOG_USER: admin" -H "X-Auth-Token: ${TOKEN}" -H "Content-type:application/json"  -X GET http://localhost:9999/v1/license/
-	# sleep 5
 	source /root/localrc
 	echo "${LOCAL_PATH}/ThinkCloud_Storage_license_trial_2018-01-29.zip"
 	cephmgmtclient update-license -l "ThinkCloud_Storage_license_trial_2018-01-29.zip"
@@ -102,23 +65,17 @@ function deploy_ceph_cluster(){
 
 STARTTIME=`date +'%Y-%m-%d %H:%M:%S'`
 
-#modify_hosts_file
-#modify_dns
-# install_dependent
-# download_sds
-# uzip_sds_pkg
-
 install_sds
 sleep 5
 conf_ha
 sleep 5
 put_license
-sleep 5
-create_ceph_cluster
-sleep 5
-add_host_to_cluster
-sleep 130
-deploy_ceph_cluster
+# sleep 5
+# create_ceph_cluster
+# sleep 5
+# add_host_to_cluster
+# sleep 130
+# deploy_ceph_cluster
 
 ENDTIME=`date +'%Y-%m-%d %H:%M:%S'`
 START_SECONDS=$(date --date="${STARTTIME}" +%s)
