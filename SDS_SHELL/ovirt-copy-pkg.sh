@@ -3,12 +3,13 @@ set -x
 
 COPY_SDS_DEPLOY_SHELL_NODE="192.168.100.220"
 COPY_SSH_RSA_PUB_NODE=(192.168.100.220 192.168.100.221 192.168.100.222 192.168.100.223 192.168.100.224)
-COPY_LICENSE_FILE_NAME="ThinkCloud_Storage_license_trial_2018-01-29.zip"
+COPY_LICENSE_FILE_NAME="ThinkCloud_Storage_license_trial_2018-06-13.zip"
 COPY_SDS_DEPLOY_SHELL_NAME="ovirt-deploy-sds.sh"
 
 SSH_KNOWN_HOSTS_PATH="/root/.ssh/known_hosts"
 SDS_PKG_URL="http://10.120.16.212/build/tcs_nfvi_centos7.5/"
-SDS_PKG_NAME=$(curl http://10.120.16.212/build/tcs_nfvi_centos7.5/ | grep $(date +"%Y%m%d") | tail -1 | sed 's/.*\(deployment-standalone-daily_[0-9]*_[0-9]*.tar.gz\).*/\1/')
+# SDS_PKG_NAME=$(curl http://10.120.16.212/build/tcs_nfvi_centos7.5/ | grep $(date +"%Y%m%d") | tail -1 | sed 's/.*\(deployment-standalone-daily_[0-9]*_[0-9]*.tar.gz\).*/\1/')
+SDS_PKG_NAME=$(curl http://10.120.16.212/build/tcs_nfvi_centos7.5/ | grep deployment-standalone | tail -1 | sed 's/.*\(deployment-standalone-daily_[0-9]*_[0-9]*.tar.gz\).*/\1/')
 
 #DATE=`date +"%Y%m%d"`
 DATE="20180622"

@@ -3,10 +3,10 @@
 CEPH_NODE_HOST_USER="root"
 CEPH_NODE_HOST_PASSWORD="1234567890"
 CEPH_CONTROLLER_IP="2008:20c:20c:20c:20c:29ff:0:220"
-CEPH_NODE_NAME=(avodev-ceph-1 avodev-ceph-2 avodev-ceph-3 avodev-ceph-4)
-CEPH_PUBLIC_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223 2008:20c:20c:20c:20c:29ff:0:224)
-CEPH_CLUSTER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223 2008:20c:20c:20c:20c:29ff:0:224)
-CEPH_MANAGER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223 2008:20c:20c:20c:20c:29ff:0:224)
+CEPH_NODE_NAME=(avodev-ceph-1 avodev-ceph-2 avodev-ceph-3)
+CEPH_PUBLIC_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223)
+CEPH_CLUSTER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223)
+CEPH_MANAGER_IP=(2008:20c:20c:20c:20c:29ff:0:221 2008:20c:20c:20c:20c:29ff:0:222 2008:20c:20c:20c:20c:29ff:0:223)
 
 function install_sds(){
 	pushd deployment
@@ -40,8 +40,8 @@ function conf_ha() {
 function put_license(){
 	LOCAL_PATH=`pwd`
 	source /root/localrc
-	echo "${LOCAL_PATH}/ThinkCloud_Storage_license_trial_2018-01-29.zip"
-	cephmgmtclient update-license -l "ThinkCloud_Storage_license_trial_2018-01-29.zip"
+	echo "${LOCAL_PATH}/ThinkCloud_Storage_license_trial_2018-06-13.zip"
+	cephmgmtclient update-license -l "ThinkCloud_Storage_license_trial_2018-06-13.zip"
 }
 
 function create_ceph_cluster(){
@@ -67,15 +67,16 @@ STARTTIME=`date +'%Y-%m-%d %H:%M:%S'`
 
 install_sds
 sleep 5
-conf_ha
-sleep 5
+# conf_ha
+# sleep 5
 put_license
-# sleep 5
-# create_ceph_cluster
-# sleep 5
-# add_host_to_cluster
-# sleep 130
-# deploy_ceph_cluster
+sleep 5
+create_ceph_cluster
+sleep 5
+add_host_to_cluster
+sleep 300
+deploy_ceph_cluster
+sleep 300
 
 ENDTIME=`date +'%Y-%m-%d %H:%M:%S'`
 START_SECONDS=$(date --date="${STARTTIME}" +%s)
