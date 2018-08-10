@@ -9,7 +9,8 @@ echo ${IP}
 HOST_NAME=`hostname -s`
 
 CEPH_NODE_HOSTNAME=(plana003 plana004 plana005 plana006)
-CEPH_NODE_HOSTIP=(192.168.100.152 192.168.100.153 192.168.100.154 192.168.100.155)
+CEPH_NODE_HOSTIP=(192.168.100.171 192.168.100.172 192.168.100.173 192.168.100.174)
+CEPH_NODE_PASSWORD="yujiang2"
 
 PIP_TIMEOUT="600"
 
@@ -41,7 +42,7 @@ function mutual_trust_between_nodes() {
 		spawn ssh-copy-id root@${CEPH_NODE_HOSTIP[${i}]}
 		expect {
 			\"*Are you sure you want to continue connecting (yes/no)*\" { send \"yes\r\";exp_continue }
-			\"*root@* password:*\" { send \"yujiang2\r\";exp_continue }
+			\"*root@* password:*\" { send \"${CEPH_NODE_PASSWORD}\r\";exp_continue }
 		}
 		expect eof
 		"
@@ -302,21 +303,21 @@ archive_base: /home/teuthworker/archive
 verify_host_keys: false
 # 官方的是：http://github.com/ceph/，就是我们下载各种需要的组件源码的路径
 # 这里暂时使用github上的，之后我们将搭建一个完整的git服务器替代它
-ceph_git_base_url: https://github.com/ceph/
-ceph_qa_suite_git_url: https://github.com/ceph/ceph-qa-suite.git
-ceph_git_url: https://github.com/ceph/ceph.git
+ceph_git_base_url: https://github.com/lnsyyj/
+ceph_qa_suite_git_url: https://github.com/lnsyyj/ceph-qa-suite.git
+ceph_git_url: https://github.com/lnsyyj/ceph.git
 # 就是前面搭的gitbuilder的地址
 gitbuilder_host: 'gitbuilder.ceph.com'
 reserve_machines: 1
 # 归档目录，直接写本机的地址加/teuthology即可
-archive_server: http://${IP}/teuthology/
+archive_server: http://${IP}/
 max_job_time: 86400
 suite_verify_ceph_hash: False" > /etc/teuthology.yaml
 }
 
 function install_teuthology() {
 	su - teuthology -c "sudo yum -y install epel-release && sudo yum -y install python-pip wget"
-	su - teuthology -c "mkdir ~/src && git clone https://github.com/ceph/teuthology.git src/teuthology_master && pushd src/teuthology_master/ && ./bootstrap && ./bootstrap install && popd && cd"
+	su - teuthology -c "mkdir ~/src && git clone https://github.com/lnsyyj/teuthology.git src/teuthology_master && pushd src/teuthology_master/ && ./bootstrap && ./bootstrap install && popd && cd"
 	su - teuthology -c "wget https://raw.githubusercontent.com/ceph/teuthology/master/docs/_static/create_nodes.py"
 	sed -i "s/\(paddles_url\ =\ 'http\:\/\/\)paddles\.example\.com\/nodes\/\(.*\)/\1${IP}\:8080\2/g" "/home/teuthology/create_nodes.py"
 	sed -i "s/\(machine_type\ =\ '\)typica\(.*\)/\1plana\2/g" "/home/teuthology/create_nodes.py"
@@ -393,7 +394,7 @@ echo "本次运行时间： "$((END_SECONDS-START_SECONDS))"s"
 # teuthology-lock --owner initial@setup --unlock plana005.test.com
 # teuthology-lock --owner initial@setup --unlock plana006.test.com
 
-# 3.手动
+# 3.手动（teuthology节点执行）
 # su - teuthworker
 # cd src/teuthology_master
 # source virtualenv/bin/activate
@@ -407,3 +408,71 @@ echo "本次运行时间： "$((END_SECONDS-START_SECONDS))"s"
 # SELINUX=permissive
 
 # 5.几台ceph节点必须可以连接外网
+
+# 6.几个ceph节点
+# su - ubuntu
+# ssh-keygen
+
+# 7.手动（teuthology节点执行）
+# sudo vi /home/teuthworker/bin/worker_start
+# #function start_all {
+# #   start_workers_for_tube plana 3
+# #   start_workers_for_tube mira 50
+# #   start_workers_for_tube vps 80
+# #   start_workers_for_tube burnupi 10
+# #   start_workers_for_tube tala 5
+# #   start_workers_for_tube saya 10
+# #   start_workers_for_tube multi 100
+# #} 
+# 
+# su - teuthworker
+# source src/teuthology_master/virtualenv/bin/activate
+# cd bin/ && ./worker_start
+
+# 8.测试
+# (virtualenv) [teuthology@yujiang-teuthology teuthology_master]$ cat test.yaml 
+# check-locks: false
+# use_existing_cluster: true
+# roles:
+# - [mon.a, osd.0, client.0]
+# tasks:
+# - install:
+# tasks:
+# - exec:
+#     client.0:
+#       - sudo ls
+#       - sudo pwd
+# overrides:
+#   selinux:
+#      whitelist:
+#       - 'name="cephtest"'
+#       - 'dmidecode'
+#       - 'comm="logrotate"'
+#       - 'comm="idontcare"'
+#       - 'comm="sshd"'
+#       - 'comm="load_policy"'
+#       - 'comm="useradd"'
+#       - 'comm="groupadd"'
+#       - 'comm="unix_chkpwd"'
+#       - 'comm="auditd"'
+# targets:
+# ubuntu@plana003.test.com: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCqlVCQnkp3m8FEI52W62ZUY/FokA443m4PCPqYbxR7ejA2IcVCpnHb50X3VMuOqz/o4KDPxahL7u1OP98ziZ+3F1ciK/21xEOKen6RL2WAqg3CT2FWvdhupPwZsW5Cn655Y8J7mjPzoZE7GDi0j/O1hhTw5qiGOrLoKOWAKOcIduITTYcH4XFHxrxjb2WzV+x6OIs5OTs53wuvJyNsoBJelv9vk/EAkjWVG1Ytf9qEP3UMqTZTfnfJrDHWdWB871PTsFlR7P2x7Ca68FpXAU+Mgk4GvBkF2QdL/8cQC4BgFXcjXOTOqO+4+n2VeKLIid5ywI4LsrI2QLAhDGtZ2JF1
+#
+# su - teuthology
+# source src/teuthology_master/virtualenv/bin/activate
+# cd src/teuthology_master/
+# teuthology-schedule --name yujiang test.yaml
+
+
+
+#
+# vi /etc/nginx/conf.d/default.conf   添加如下
+#       location /teuthworker {
+#            allow all;
+#            autoindex on;
+#            alias /home/teuthworker/archive;
+#            default_type text/plain;
+#        }
+#
+#
+#
