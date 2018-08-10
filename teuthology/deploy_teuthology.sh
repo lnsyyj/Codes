@@ -298,6 +298,7 @@ results_server: http://${IP}:8080
 queue_host: 127.0.0.1
 queue_port: 11300
 results_email: lnsyyj@hotmail.com
+results_sending_email: teuthology@test.com
 # 本地归档，直接放在执行者的家目录下
 archive_base: /home/teuthworker/archive
 verify_host_keys: false
@@ -310,7 +311,8 @@ ceph_git_url: https://github.com/lnsyyj/ceph.git
 gitbuilder_host: 'gitbuilder.ceph.com'
 reserve_machines: 1
 # 归档目录，直接写本机的地址加/teuthology即可
-archive_server: http://${IP}/
+archive_server: http://${PUBLIC_IP}/
+results_ui_server: http://${PUBLIC_IP}/
 max_job_time: 86400
 suite_verify_ceph_hash: False" > /etc/teuthology.yaml
 }
