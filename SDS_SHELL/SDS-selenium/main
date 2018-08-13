@@ -1,0 +1,49 @@
+# -*- coding:utf-8 -*-
+#!/usr/bin/python
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+import time
+
+
+
+
+
+if __name__ == '__main__':
+    b = webdriver.Chrome()
+    b.get("http://10.100.47.76")
+    b.maximize_window()
+    ele = b.find_element_by_id("id_username")
+    ele.send_keys("admin")
+    ele = b.find_element_by_id("id_password")
+    ele.send_keys("Admin_123456")
+    ele = b.find_element_by_id("loginBtn")
+    ele.click()
+    # ele = b.find_elements_by_partial_link_text("存储管理")
+    # ele = b.find_element_by_link_text(u"存储池")
+    # ele = b.find_element_by_css_selector("body > main > ba-sidebar > aside > div.slimScrollDiv > ul > li.al-sidebar-list-item.ng-scope.with-sub-menu.ba-sidebar-item-expanded > a > span")
+    # ele = b.find_element_by_class_name("slimScrollDiv")
+    # ele.find_element_by_class_name("ng-binding")
+
+    time.sleep(5)
+    b.current_window_handle
+    ele = b.find_element_by_xpath("/html/body/main/ba-sidebar/aside/div[2]/ul/li[3]/a/span")
+    ele.click()
+    ele = b.find_element_by_xpath("/html/body/main/ba-sidebar/aside/div[2]/ul/li[3]/ul/li[1]/a")
+    ele.click()
+    time.sleep(5)
+    ele = b.find_element_by_xpath("/html/body/main/div/div/div/div/div/div/div/div/div/div/div/div/pool-list-table/table/thead/tr[1]/td/div/button[2]")
+    ele.click()
+    time.sleep(5)
+    b.current_window_handle
+    ele = b.find_element_by_xpath("//*[@id=\"newPoolName\"]")
+    ele.send_keys("selenium-rbd-3")
+    # ele = b.find_element_by_xpath("//*[@id=\"createPool\"]")
+    # ele = b.find_element_by_css_selector("#createPool")
+    # print(type(ele))
+    # ele.send_keys("1")
+    # ele.send_keys(Keys.NUMPAD3)
+    ele = b.find_element_by_xpath("//*[@id=\"form\"]/ng-form/div[3]/button[1]")
+    ele.click()
+    # ele.find_element_by_xpath("/html/body/main/ba-sidebar/aside/div[2]/ul/li[3]/a/span")
+
