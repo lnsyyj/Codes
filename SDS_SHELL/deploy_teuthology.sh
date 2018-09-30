@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 
-PUBLIC_IP="10.100.46.205"
+PUBLIC_IP="10.121.8.93"
 
 NETWORK_DEVICE_NAME="eth0"
 IP=$(ifconfig ${NETWORK_DEVICE_NAME} | sed -n '/inet /p' | sed 's/inet \([0-9.]\+\) .*$/\1/' | sed 's/\ //g')
@@ -9,7 +9,10 @@ echo ${IP}
 HOST_NAME=`hostname -s`
 
 CEPH_NODE_HOSTNAME=(plana003 plana004 plana005 plana006)
-CEPH_NODE_HOSTIP=(192.168.100.152 192.168.100.153 192.168.100.154 192.168.100.155)
+CEPH_NODE_HOSTIP=(192.168.0.17 192.168.0.25 192.168.0.15 192.168.0.24)
+CEPH_NODE_PASSWORD="yujiang2"
+
+PIP_TIMEOUT="600"
 
 function modify_dns() {
 	if ! grep -q "nameserver.*10.96.1.18" /etc/resolv.conf; then
@@ -18,15 +21,15 @@ function modify_dns() {
 }
 
 function modify_hostname() {
-	echo "${HOST_NAME}.test.com" > /etc/hostname
+	echo "${HOST_NAME}.test.lenovo.com" > /etc/hostname
 }
 
 function modify_hosts_file() {
-	echo "${IP} ${HOST_NAME} ${HOST_NAME}.test.com" >> /etc/hosts
+	echo "${IP} ${HOST_NAME} ${HOST_NAME}.test.lenovo.com" >> /etc/hosts
 	LEN=${#CEPH_NODE_HOSTNAME[@]}
 	for ((i=0; i<${LEN}; i++))
 	do
-		echo "${CEPH_NODE_HOSTIP[${i}]} ${CEPH_NODE_HOSTNAME[${i}]} ${CEPH_NODE_HOSTNAME[${i}]}.test.com" >> /etc/hosts
+		echo "${CEPH_NODE_HOSTIP[${i}]} ${CEPH_NODE_HOSTNAME[${i}]} ${CEPH_NODE_HOSTNAME[${i}]}.test.lenovo.com" >> /etc/hosts
 	done
 }
 
@@ -39,20 +42,31 @@ function mutual_trust_between_nodes() {
 		spawn ssh-copy-id root@${CEPH_NODE_HOSTIP[${i}]}
 		expect {
 			\"*Are you sure you want to continue connecting (yes/no)*\" { send \"yes\r\";exp_continue }
-			\"*root@* password:*\" { send \"yujiang2\r\";exp_continue }
+			\"*root@* password:*\" { send \"${CEPH_NODE_PASSWORD}\r\";exp_continue }
 		}
 		expect eof
 		"
 	done
 }
 
+function remote_create_user() {
+	LEN=${#CEPH_NODE_HOSTNAME[@]}
+	for ((i=0; i<${LEN}; i++))
+	do
+		ssh root@${CEPH_NODE_HOSTIP[${i}]} "useradd ubuntu -m -G root -g root -s /bin/bash"
+		ssh root@${CEPH_NODE_HOSTIP[${i}]} "echo ubuntu:ubuntu | chpasswd"
+		ssh root@${CEPH_NODE_HOSTIP[${i}]} "echo \"ubuntu   ALL=(ALL)         NOPASSWD: ALL\" >> /etc/sudoers"
+	done
+}
+
 function install_dependent() {
 	sudo yum install -y wget expect curl git python-virtualenv python-devel postgresql postgresql-contrib postgresql-devel postgresql-server openssh-server net-tools gcc 
 	curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-	python get-pip.py
-	python -m pip install -U pip
-	pip install --upgrade setuptools
-	pip install supervisor
+	python get-pip.py --timeout ${PIP_TIMEOUT}
+	python -m pip install -U pip --timeout ${PIP_TIMEOUT}
+	pip install --upgrade setuptools --timeout ${PIP_TIMEOUT}
+	pip install supervisor --timeout ${PIP_TIMEOUT}
+	pip install bottle --timeout ${PIP_TIMEOUT}
 }
 
 function stop_firewall() {
@@ -76,20 +90,32 @@ function generate_sshkey() {
 	"
 }
 
-function copy_sshkey_to_ceph_node() {
-	LEN=${#CEPH_NODE_HOSTNAME[@]}
-	for ((i=0; i<${LEN}; i++))
-	do
-		expect -c "
-		set timeout 2000
-		spawn ssh root@${COPY_SSH_RSA_PUB_NODE[${i}]} ssh-copy-id root@${COPY_SSH_RSA_PUB_NODE_IPV6[${i}]}
-		expect {
-			\"*Are you sure you want to continue connecting (yes/no)*\" { send \"yes\r\";exp_continue }
-			\"*root@192.168.100.* password:*\" { send \"1234567890\r\";exp_continue }
-		}
-		expect eof
-		"
-	done
+function teuthology_user_generate_sshkey() {
+	expect -c "
+	set timeout 2000
+	spawn su - teuthology -c ssh-keygen
+	expect {
+		\"*Enter file in which to save the key*\" { send \"\r\";exp_continue }
+		\"*Enter passphrase*\" { send \"\r\";exp_continue }
+		\"*Enter same passphrase again*\" { send \"\r\";exp_continue }
+		\"*Overwrite*\" { send \"n\r\";exp_continue }
+	}
+	expect eof
+	"
+}
+
+function teuthworker_user_generate_sshkey() {
+	expect -c "
+	set timeout 2000
+	spawn su - teuthworker -c ssh-keygen
+	expect {
+		\"*Enter file in which to save the key*\" { send \"\r\";exp_continue }
+		\"*Enter passphrase*\" { send \"\r\";exp_continue }
+		\"*Enter same passphrase again*\" { send \"\r\";exp_continue }
+		\"*Overwrite*\" { send \"n\r\";exp_continue }
+	}
+	expect eof
+	"
 }
 
 function create_paddles_user() {
@@ -147,11 +173,11 @@ function install_paddles() {
 	su - paddles -c "mkdir github"
 	su - paddles -c "pushd github;git clone https://github.com/ceph/paddles.git;popd"
 	su - paddles -c "pushd github/paddles;virtualenv ./virtualenv;popd"
-	
+
 	su - paddles -c "pushd github/paddles;cp config.py.in config.py;popd"
-	
+
 	sed -i "s/\(\ *'host'\:\ '\)127\.0\.0\.1\(.*\)/\1${IP}\2/g" "/home/paddles/github/paddles/config.py"
-	sed -i "s/\(\ *'host'\:\ '\)example\.com\(.*\)/\1${HOST_NAME}\.test\.com\2/g" "/home/paddles/github/paddles/config.py"
+	sed -i "s/\(\ *'host'\:\ '\)example\.com\(.*\)/\1${HOST_NAME}\.test\.lenovo\.com\2/g" "/home/paddles/github/paddles/config.py"
 	sed -i "s/\(\ *'url'\:\ '\)sqlite:\/\/\/dev\.db\(.*\)/\1postgresql:\/\/postgres\:1q2w3e@localhost\/paddles\2/g" "/home/paddles/github/paddles/config.py"
 
 	su - paddles -c "pushd github/paddles;cp alembic.ini.in alembic.ini;popd"
@@ -159,7 +185,7 @@ function install_paddles() {
 
 	sed -i "s/\(job_log_href_templ\ =\ '\)http\:\/\/qa-proxy\.ceph\.com\/teuthology\/{run_name}\/{job_id}\/teuthology\.log\(.*\)/\1http\:\/\/${PUBLIC_IP}\/teuthworker\/{run_name}\/{job_id}\/teuthology.log\2/g" "/home/paddles/github/paddles/config.py"
 
-	su - paddles -c "pushd github/paddles;source virtualenv/bin/activate;python -m pip install -U pip;pip install --upgrade setuptools;pip install -r requirements.txt;python setup.py develop;pecan populate config.py;popd"
+	su - paddles -c "pushd github/paddles;source virtualenv/bin/activate;python -m pip install -U pip;pip install --upgrade setuptools;pip install -r requirements.txt --timeout ${PIP_TIMEOUT};python setup.py develop;pecan populate config.py;popd"
 }
 
 function install_pulpito() {
@@ -171,7 +197,7 @@ function install_pulpito() {
 	sed -i "s/\(paddles_address\ =\ '\)http\:\/\/sentry\.front\.sepia\.ceph\.com\:8080\('\)/\1http:\/\/${IP}\:8080\2/g" "/home/pulpito/github/pulpito/prod.py"
 
 	# sed -i "s///g" "/home/pulpito/github/pulpito/requirements.txt"
-	su - pulpito -c "pushd github/pulpito;source virtualenv/bin/activate;python -m pip install -U pip;pip install --upgrade setuptools;pip install -r requirements.txt;popd"
+	su - pulpito -c "pushd github/pulpito;source virtualenv/bin/activate;python -m pip install -U pip;pip install --upgrade setuptools;pip install -r requirements.txt --timeout ${PIP_TIMEOUT};popd"
 }
 
 
@@ -207,10 +233,6 @@ redirect_stderr=true
 stdout_logfile = /home/pulpito/github/pulpito/pulpito.out.log
 stderr_logfile = /home/pulpito/github/pulpito/pulpito.err.log" > /etc/supervisor/pulpito.conf
 
-	# service postgresql restart
-	# supervisord -c /etc/supervisord.conf
-	
-
 	touch /etc/systemd/system/supervisord.service
 	echo "# supervisord service for systemd (CentOS 7.0+)
 # by ET-CS (https://github.com/ET-CS)
@@ -238,7 +260,7 @@ WantedBy=multi-user.target" > /etc/systemd/system/supervisord.service
 }
 
 function install_beanstalkd() {
-	yum install libevent-devel libvirt-python openssl-devel mysql-libs libffi-devel libyaml-devel redhat-lsb python-pip mariadb-devel libev-devel libvirt-devel -y
+	yum install libevent-devel libvirt-python openssl-devel mysql-libs libffi-devel libyaml-devel redhat-lsb python-pip mariadb-devel libev-devel libvirt-devel ansible -y
 	pushd /home/ && mkdir beanstalkd && pushd beanstalkd && git clone https://github.com/kr/beanstalkd.git && pushd beanstalkd && make && cp beanstalkd /usr/bin/beanstalkd && mkdir /var/lib/beanstalkd && cd
 	touch /etc/systemd/system/beanstalkd.service
 	echo "[Unit]
@@ -268,7 +290,7 @@ function install_and_conf_nginx() {
 
 function generate_teuthology_conf() {
 	touch /etc/teuthology.yaml
-	echo "lab_domain: test.com
+	echo "lab_domain: test.lenovo.com
 # paddles所在服务器
 lock_server: http://${IP}:8080
 # paddles所在服务器
@@ -277,26 +299,28 @@ results_server: http://${IP}:8080
 queue_host: 127.0.0.1
 queue_port: 11300
 results_email: lnsyyj@hotmail.com
+results_sending_email: teuthology@test.lenovo.com
 # 本地归档，直接放在执行者的家目录下
 archive_base: /home/teuthworker/archive
 verify_host_keys: false
 # 官方的是：http://github.com/ceph/，就是我们下载各种需要的组件源码的路径
 # 这里暂时使用github上的，之后我们将搭建一个完整的git服务器替代它
-ceph_git_base_url: https://github.com/ceph/
-ceph_qa_suite_git_url: https://github.com/ceph/ceph-qa-suite.git
-ceph_git_url: https://github.com/ceph/ceph.git
+ceph_git_base_url: https://github.com/lnsyyj/
+ceph_qa_suite_git_url: https://github.com/lnsyyj/ceph-qa-suite.git
+ceph_git_url: https://github.com/lnsyyj/ceph.git
 # 就是前面搭的gitbuilder的地址
 gitbuilder_host: 'gitbuilder.ceph.com'
 reserve_machines: 1
 # 归档目录，直接写本机的地址加/teuthology即可
-archive_server: http://${IP}/teuthology/
+archive_server: http://${PUBLIC_IP}/
+results_ui_server: http://${PUBLIC_IP}/
 max_job_time: 86400
 suite_verify_ceph_hash: False" > /etc/teuthology.yaml
 }
 
 function install_teuthology() {
 	su - teuthology -c "sudo yum -y install epel-release && sudo yum -y install python-pip wget"
-	su - teuthology -c "mkdir ~/src && git clone https://github.com/ceph/teuthology.git src/teuthology_master && pushd src/teuthology_master/ && ./bootstrap && ./bootstrap install && popd && cd"
+	su - teuthology -c "mkdir ~/src && git clone https://github.com/lnsyyj/teuthology.git src/teuthology_master && pushd src/teuthology_master/ && ./bootstrap && ./bootstrap install && popd && cd"
 	su - teuthology -c "wget https://raw.githubusercontent.com/ceph/teuthology/master/docs/_static/create_nodes.py"
 	sed -i "s/\(paddles_url\ =\ 'http\:\/\/\)paddles\.example\.com\/nodes\/\(.*\)/\1${IP}\:8080\2/g" "/home/teuthology/create_nodes.py"
 	sed -i "s/\(machine_type\ =\ '\)typica\(.*\)/\1plana\2/g" "/home/teuthology/create_nodes.py"
@@ -304,12 +328,6 @@ function install_teuthology() {
 	MACHINE_UPPER_LIMIT="7"
 	sed -i "s/\(machine_index_range\ =\ range(3,\ \)192\(.*\)/\1${MACHINE_UPPER_LIMIT}\2/g" "/home/teuthology/create_nodes.py"
 	cp "/home/teuthology/create_nodes.py" "/home/teuthology/src/teuthology_master"
-	su - teuthology -c "pushd src/teuthology_master/;source virtualenv/bin/activate;python create_nodes.py;popd"
-
-	su - teuthology -c "pushd src/teuthology_master/;source virtualenv/bin/activate;teuthology-lock --owner initial@setup --unlock plana003;popd"
-	su - teuthology -c "pushd src/teuthology_master/;source virtualenv/bin/activate;teuthology-lock --owner initial@setup --unlock plana004;popd"
-	su - teuthology -c "pushd src/teuthology_master/;source virtualenv/bin/activate;teuthology-lock --owner initial@setup --unlock plana005;popd"
-	su - teuthology -c "pushd src/teuthology_master/;source virtualenv/bin/activate;teuthology-lock --owner initial@setup --unlock plana006;popd"
 }
 
 function install_teuthworker() {
@@ -320,26 +338,31 @@ function install_teuthworker() {
 	su - teuthworker -c "mkdir -p ~/archive/worker_logs"
 	su - teuthworker -c "pushd bin/ && chmod 777 *"
 
-
-
-	su - teuthworker -c "source src/teuthology_master/virtualenv/bin/activate && pushd bin/ && ./worker_start"
+	chmod 777 /home/
+	chmod 777 /home/teuthworker/
+	chmod 777 -R /home/teuthworker/archive/
 }
-
 
 STARTTIME=`date +'%Y-%m-%d %H:%M:%S'`
 
 modify_dns
 modify_hostname
 modify_hosts_file
-generate_sshkey
-mutual_trust_between_nodes
 install_dependent
 stop_firewall
-create_paddles_user
-create_pulpito_user
+generate_sshkey
+mutual_trust_between_nodes
+remote_create_user
 create_teuthology_user
 create_teuthworker_user
 add_sudoer
+
+teuthology_user_generate_sshkey
+teuthworker_user_generate_sshkey
+
+create_paddles_user
+create_pulpito_user
+
 config_postgresql
 install_paddles
 install_pulpito
@@ -354,3 +377,105 @@ ENDTIME=`date +'%Y-%m-%d %H:%M:%S'`
 START_SECONDS=$(date --date="${STARTTIME}" +%s)
 END_SECONDS=$(date --date="${ENDTIME}" +%s)
 echo "本次运行时间： "$((END_SECONDS-START_SECONDS))"s"
+
+# 1.手动添加主机（teuthology节点执行）
+# su - teuthology
+# cd src/teuthology_master/
+# source virtualenv/bin/activate
+# ssh-copy-id ubuntu@plana003.test.lenovo.com
+# ssh-copy-id ubuntu@plana004.test.lenovo.com
+# ssh-copy-id ubuntu@plana005.test.lenovo.com
+# ssh-copy-id ubuntu@plana006.test.lenovo.com
+# python create_nodes.py
+
+# 2.手动解锁主机（teuthology节点执行）
+# su - teuthology
+# cd src/teuthology_master/
+# source virtualenv/bin/activate
+# teuthology-lock --owner initial@setup --unlock plana003.test.lenovo.com
+# teuthology-lock --owner initial@setup --unlock plana004.test.lenovo.com
+# teuthology-lock --owner initial@setup --unlock plana005.test.lenovo.com
+# teuthology-lock --owner initial@setup --unlock plana006.test.lenovo.com
+
+# 3.手动（teuthology节点执行）
+# su - teuthworker
+# cd src/teuthology_master
+# source virtualenv/bin/activate
+# ssh-copy-id ubuntu@plana003.test.lenovo.com
+# ssh-copy-id ubuntu@plana004.test.lenovo.com
+# ssh-copy-id ubuntu@plana005.test.lenovo.com
+# ssh-copy-id ubuntu@plana006.test.lenovo.com
+
+# 4.ceph节点需要设置selinux
+# vi /etc/selinux/config
+# SELINUX=permissive
+
+# 5.几台ceph节点必须可以连接外网
+
+# 6.几个ceph节点
+# su - ubuntu
+# ssh-keygen
+
+# 7.手动（teuthology节点执行）
+# sudo vi /home/teuthworker/bin/worker_start
+# #function start_all {
+# #   start_workers_for_tube plana 3
+# #   start_workers_for_tube mira 50
+# #   start_workers_for_tube vps 80
+# #   start_workers_for_tube burnupi 10
+# #   start_workers_for_tube tala 5
+# #   start_workers_for_tube saya 10
+# #   start_workers_for_tube multi 100
+# #} 
+# 
+# su - teuthworker
+# source src/teuthology_master/virtualenv/bin/activate
+# cd bin/ && ./worker_start
+
+# 8.测试
+# (virtualenv) [teuthology@yujiang-teuthology teuthology_master]$ cat test.yaml 
+# check-locks: false
+# use_existing_cluster: true
+# roles:
+# - [mon.a, osd.0, client.0]
+# tasks:
+# - install:
+# tasks:
+# - exec:
+#     client.0:
+#       - sudo ls
+#       - sudo pwd
+# overrides:
+#   selinux:
+#      whitelist:
+#       - 'name="cephtest"'
+#       - 'dmidecode'
+#       - 'comm="logrotate"'
+#       - 'comm="idontcare"'
+#       - 'comm="sshd"'
+#       - 'comm="load_policy"'
+#       - 'comm="useradd"'
+#       - 'comm="groupadd"'
+#       - 'comm="unix_chkpwd"'
+#       - 'comm="auditd"'
+# targets:
+# ubuntu@plana003.test.com: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCqlVCQnkp3m8FEI52W62ZUY/FokA443m4PCPqYbxR7ejA2IcVCpnHb50X3VMuOqz/o4KDPxahL7u1OP98ziZ+3F1ciK/21xEOKen6RL2WAqg3CT2FWvdhupPwZsW5Cn655Y8J7mjPzoZE7GDi0j/O1hhTw5qiGOrLoKOWAKOcIduITTYcH4XFHxrxjb2WzV+x6OIs5OTs53wuvJyNsoBJelv9vk/EAkjWVG1Ytf9qEP3UMqTZTfnfJrDHWdWB871PTsFlR7P2x7Ca68FpXAU+Mgk4GvBkF2QdL/8cQC4BgFXcjXOTOqO+4+n2VeKLIid5ywI4LsrI2QLAhDGtZ2JF1
+#
+# su - teuthology
+# source src/teuthology_master/virtualenv/bin/activate
+# cd src/teuthology_master/
+# teuthology-schedule --name yujiang test.yaml
+
+
+
+#
+# vi /etc/nginx/conf.d/default.conf   添加如下
+#       location /teuthworker {
+#            allow all;
+#            autoindex on;
+#            alias /home/teuthworker/archive;
+#            default_type text/plain;
+#        }
+#
+#
+#
