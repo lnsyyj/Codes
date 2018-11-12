@@ -10,16 +10,16 @@ Target Server Type    : MYSQL
 Target Server Version : 50556
 File Encoding         : 65001
 
-Date: 2018-11-12 14:16:05
+Date: 2018-11-12 15:24:51
 */
 
 SET FOREIGN_KEY_CHECKS=0;
 
 -- ----------------------------
--- Table structure for stability_sysbench
+-- Table structure for stability_sysbench_concurrent
 -- ----------------------------
-DROP TABLE IF EXISTS `stability_sysbench`;
-CREATE TABLE `stability_sysbench` (
+DROP TABLE IF EXISTS `stability_sysbench_concurrent`;
+CREATE TABLE `stability_sysbench_concurrent` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `datetime` datetime DEFAULT NULL,
   `outputinterval` int(255) DEFAULT NULL,
@@ -35,5 +35,6 @@ CREATE TABLE `stability_sysbench` (
   `err` double(255,3) DEFAULT NULL,
   `reconn` double(255,3) DEFAULT NULL,
   `operationtabledate` datetime DEFAULT NULL,
+  `client_number` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=69045 DEFAULT CHARSET=utf8;
