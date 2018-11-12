@@ -6,6 +6,7 @@ import time
 import re
 import os
 import datetime
+from datetime import timedelta
 
 mysql_ip = "127.0.0.1"
 mysql_account = "root"
@@ -14,7 +15,7 @@ mysql_db_name = "ceph"
 mysql_table_name = "stability_sysbench_concurrent"
 
 # file_directory = "/home/yujiang/simth_vdbench_data/"
-file_directory = "/home/yujiang/sysbench_log/"
+file_directory = "/Users/yujiang/Downloads/sysbench/"
 #file_name = "total.log"
 
 def mariadb_connect_test():
@@ -30,9 +31,9 @@ def date_conversion(sys_datetime, interval):
     tmp_date = sys_datetime.split(" ")
     tmp_date[1] = tmp_date[1].replace("-",":")
     sys_datetime = tmp_date[0] + " " + tmp_date[1]
-    sys_datetime = datetime.strptime(sys_datetime, '%Y-%m-%d %H:%M:%S')
+    sys_datetime = datetime.datetime.strptime(sys_datetime, '%Y-%m-%d %H:%M:%S') + timedelta(seconds=int(interval))
+    #sys_datetime = sys_datetime + timedelta(seconds=int(interval))
     print sys_datetime
-    sys_datetime = sys_datetime + sys_datetime.timedelta(seconds=interval)
     return sys_datetime
 
 def parse_sysbench_results(str, file_name):
