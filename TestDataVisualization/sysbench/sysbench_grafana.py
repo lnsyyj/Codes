@@ -104,7 +104,6 @@ def get_the_files_in_the_directory():
             file_name = pattern.findall(value)[0]
         if file_name:
             files_table.append(file_name)
-    print files_table
     return files_table
 
 def parse_vdbench_result_file(file_name):
