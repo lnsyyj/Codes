@@ -15,7 +15,7 @@ mysql_db_name = "ceph"
 mysql_table_name = "stability_sysbench_concurrent"
 
 # file_directory = "/home/yujiang/simth_vdbench_data/"
-file_directory = "/Users/yujiang/Downloads/sysbench/"
+file_directory = "/home/yujiang/sysbench_log/"
 #file_name = "total.log"
 
 def mariadb_connect_test():
@@ -32,8 +32,7 @@ def date_conversion(sys_datetime, interval):
     tmp_date[1] = tmp_date[1].replace("-",":")
     sys_datetime = tmp_date[0] + " " + tmp_date[1]
     sys_datetime = datetime.datetime.strptime(sys_datetime, '%Y-%m-%d %H:%M:%S') + timedelta(seconds=int(interval))
-    #sys_datetime = sys_datetime + timedelta(seconds=int(interval))
-    print sys_datetime
+    sys_datetime = sys_datetime.strftime('%Y-%m-%d %H:%M:%S')
     return sys_datetime
 
 def parse_sysbench_results(str, file_name):
@@ -90,7 +89,7 @@ def batch_insertion(table):
     cur = conn.cursor()
     for data in table:
         print data
-        cur.execute("INSERT INTO stability_sysbench(id, datetime, outputinterval, thds, tps, qps, qps_r, qps_w, qps_o, lat, lat_unit, lat_percentage, err, reconn, operationtabledate, client_number) VALUES('NULL', '%s', '%d', '%d', '%f', '%f', '%f', '%f', '%f', '%f', '%s', '%f', '%f', '%f', '%s', '%s')" % (data[0], int(data[1]), int(data[2]), float(data[3]), float(data[4]), float(data[5]), float(data[6]), float(data[7]), float(data[8]), data[9], float(data[10]), float(data[11]), float(data[12]), dt, data[13]))
+        cur.execute("INSERT INTO stability_sysbench_concurrent(id, datetime, outputinterval, thds, tps, qps, qps_r, qps_w, qps_o, lat, lat_unit, lat_percentage, err, reconn, operationtabledate, client_number) VALUES('NULL', '%s', '%d', '%d', '%f', '%f', '%f', '%f', '%f', '%f', '%s', '%f', '%f', '%f', '%s', '%s')" % (data[0], int(data[1]), int(data[2]), float(data[3]), float(data[4]), float(data[5]), float(data[6]), float(data[7]), float(data[8]), data[9], float(data[10]), float(data[11]), float(data[12]), dt, data[13]))
     conn.commit()
     cur.close()
     conn.close()
@@ -126,7 +125,7 @@ if __name__ == '__main__':
     files_table = get_the_files_in_the_directory()
     for value in files_table:
         table = parse_vdbench_result_file(value)
-        # batch_insertion(table)
+        batch_insertion(table)
 
     # mariadb_connect_test()
     # table = parse_vdbench_result_file()
