@@ -3,7 +3,10 @@
 
 import pymysql
 import time
-from datetime import datetime
+import re
+import os
+import datetime
+from datetime import timedelta
 
 mysql_ip = "127.0.0.1"
 mysql_account = "root"
@@ -52,7 +55,20 @@ def batch_insertion(table):
     cur.close()
     conn.close()
 
+def get_the_files_in_the_directory():
+    files_table = []
+    file_name = ""
+    files = os.listdir(file_directory)
+    for value in files:
+        pattern = re.compile(r'mysysbench_log_\d+-\d+-\d+_\d+-\d+-\d+_vm-client-\d+')
+        if pattern.findall(value):
+            file_name = pattern.findall(value)[0]
+        if file_name:
+            files_table.append(file_name)
+    return files_table
+
 if __name__ == '__main__':
     mariadb_connect_test()
-    table = parse_vdbench_result_file()
-    batch_insertion(table)
+    get_the_files_in_the_directory()
+    # table = parse_vdbench_result_file()
+    # batch_insertion(table)
