@@ -18,9 +18,10 @@ file_directorys = ["1017-1020", "1021-1022", "1023-1026", "1027-1029"]
 file_names = ["summary_client1.log", "summary_client2.log", "summary_client3.log", "summary_client4.log"]
 test_types = ["bs_split", "olap", "random", "sequence"]
 
-file_directory = "/home/yujiang/simth_vdbench_data/1027-1029/"
+file_directory = "/home/yujiang/vdbench_log/"
 file_name = "summary_client4.log"
 test_type = "sequence"
+vdbench_output_interval = 5
 
 def mariadb_connect_test():
     db = pymysql.connect(mysql_ip, mysql_account, mysql_password, mysql_db_name)
@@ -30,17 +31,30 @@ def mariadb_connect_test():
     print "Database version : %s " % data
     db.close()
 
-def parse_vdbench_result_file():
+def parse_vdbench_results(str, file_name):
+    date_pattern = re.compile(r'myvdbench_log_(\d+-\d+-\d+_\d+-\d+-\d+)_vm-client-\d+')
+    vdb_datetime = date_pattern.findall(file_name)[0].strip()
+    print vdb_datetime
+    
+
+def parse_vdbench_result_file(file_name):
     table = []
-    with open(file_directory + file_name, "r") as file:
+    tmp_start_time = ""
+
+    date_pattern = re.compile(r'Vdbench summary report, created (\d+:\d+:\d+\s+\w+\s+\d+\s+\d+\s+)\w+')
+    line_pattern = re.compile(r'\d+:\d+:\d+\.\d+\s+\d+\s+\d+.\d+\s+\d+.\d+\s+\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+')
+    with open(file_name, "r") as file:
         line = file.readline()
         while line:
-            rs_data = line.strip('\n').split(' ')
-            tmp_time = rs_data[0] + " " + rs_data[1].split('.')[0]
-            del rs_data[0]
-            del rs_data[0]
-            rs_data.insert(0, tmp_time)
-            table.append(rs_data)
+            if date_pattern.findall(line):
+                tmp_start_time = date_pattern.findall(line)[0].strip()
+                print tmp_start_time
+            if line_pattern.findall(line):
+                result = line_pattern.findall(line)[0].strip()
+                print result
+                #tmp_data = parse_sysbench_results(result, file_name)
+                #print line
+                #table.append(tmp_data)
             line = file.readline()
     return table
     
@@ -57,18 +71,19 @@ def batch_insertion(table):
 
 def get_the_files_in_the_directory():
     files_table = []
-    file_name = ""
-    files = os.listdir(file_directory)
-    for value in files:
-        pattern = re.compile(r'mysysbench_log_\d+-\d+-\d+_\d+-\d+-\d+_vm-client-\d+')
-        if pattern.findall(value):
-            file_name = pattern.findall(value)[0]
-        if file_name:
-            files_table.append(file_name)
+    file_pattern = re.compile(r'summary.html')
+    dirpath_pattern = re.compile(r'log-\d+')
+    for dirpath, dirs, files in os.walk(file_directory):
+        for file_name in files:
+            if dirpath_pattern.findall(dirpath) and file_pattern.findall(file_name):
+                tmp_file_name = file_pattern.findall(file_name)[0].strip()
+                files_table.append(dirpath + "/" + tmp_file_name)
     return files_table
 
 if __name__ == '__main__':
     mariadb_connect_test()
-    get_the_files_in_the_directory()
+    files_table = get_the_files_in_the_directory()
+    for value in files_table:
+        parse_vdbench_result_file(value)
     # table = parse_vdbench_result_file()
     # batch_insertion(table)
