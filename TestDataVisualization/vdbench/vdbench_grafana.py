@@ -35,28 +35,58 @@ def parse_vdbench_results(str, file_name):
     date_pattern = re.compile(r'myvdbench_log_(\d+-\d+-\d+_\d+-\d+-\d+)_vm-client-\d+')
     vdb_datetime = date_pattern.findall(file_name)[0].strip()
     print vdb_datetime
-    
 
+def date_conversion(vdb_datetime):
+    vdb_datetime = datetime.datetime.strptime(vdb_datetime, '%Y-%m-%d %H:%M:%S') + timedelta(seconds=int(vdbench_output_interval))
+    return vdb_datetime
+ 
 def parse_vdbench_result_file(file_name):
     table = []
+    tmp_start_date = ""
     tmp_start_time = ""
 
-    date_pattern = re.compile(r'Vdbench summary report, created (\d+:\d+:\d+\s+\w+\s+\d+\s+\d+\s+)\w+')
+    date_pattern = re.compile(r'(.*, \d{4})  interval.*')
     line_pattern = re.compile(r'\d+:\d+:\d+\.\d+\s+\d+\s+\d+.\d+\s+\d+.\d+\s+\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+')
+    date_pattern_first_time = re.compile(r'(\d+:\d+:\d+)\.\d+\s+1\s+\d+.\d+\s+\d+.\d+\s+\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+\s+\d+.\d+')
     with open(file_name, "r") as file:
+        tmp_start_date = ""
+        tmp_start_time = ""
+        
+        print file_name
+        # /home/yujiang/vdbench_log/myvdbench_log_2018-11-02_07-32-07_vm-client-1/log-10/bs_split/summary.html
         line = file.readline()
         while line:
-            if date_pattern.findall(line):
-                tmp_start_time = date_pattern.findall(line)[0].strip()
+            if date_pattern.findall(line) and tmp_start_date == "":
+                tmp_start_date = date_pattern.findall(line)[0].strip()
+                if tmp_start_date == "":
+                    break
+                print tmp_start_date
+
+            if date_pattern_first_time.findall(line) and tmp_start_time == "":
+                tmp_start_time = date_pattern_first_time.findall(line)[0].strip()
+                if tmp_start_time == "":
+                    break
                 print tmp_start_time
+            tmp_start_date_time = tmp_start_date + " " + tmp_start_time
+
             if line_pattern.findall(line):
+                c = datetime.datetime.strptime(tmp_start_date_time, '%b %d, %Y %H:%M:%S')
+                start_time = c.strftime('%Y-%m-%d %H:%M:%S')
+                #print type(start_time)
+                #print start_time
+                vdb_datetime = date_conversion(start_time)
                 result = line_pattern.findall(line)[0].strip()
+                print type(result)
                 print result
                 #tmp_data = parse_sysbench_results(result, file_name)
                 #print line
                 #table.append(tmp_data)
             line = file.readline()
     return table
+
+def parse_vdbench_results(str, file_name):
+    
+    pass
     
 def batch_insertion(table):
     dt = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
