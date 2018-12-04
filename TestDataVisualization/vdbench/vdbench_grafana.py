@@ -14,7 +14,7 @@ mysql_password = "1234567890"
 mysql_db_name = "ceph"
 mysql_table_name = "stability_vdbench_concurrent"
 
-file_directory = "/Users/yujiang/vdbench_log/vdbench_log/"
+file_directory = "/home/yujiang/vdbench_log/"
 vdbench_output_interval = 5
 
 def mariadb_connect_test():
@@ -115,4 +115,4 @@ if __name__ == '__main__':
         for x in table:
             print x
         #print table
-        # batch_insertion(table)
+        batch_insertion(table)
