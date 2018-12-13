@@ -37,4 +37,4 @@ CREATE TABLE `stability_sysbench_concurrent` (
   `operationtabledate` datetime DEFAULT NULL,
   `client_number` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=69045 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8;
