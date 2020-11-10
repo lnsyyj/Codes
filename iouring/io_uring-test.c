@@ -33,26 +33,46 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+        /*初始化struct io_uring，函数内部会调用io_uring_queue_init_params。
+         * io_uring 是一个循环队列（ring_buffer）。
+         * 第一个参数 entries 表示队列大小（实际空间可能比用户指定的大）；
+         * 第二个参数 ring 就是需要初始化的 io_uring 结构指针；
+         * 第三个参数 flags 是标志参数，无特殊需要传 0 即可。
+         * */
 	ret = io_uring_queue_init(QD, &ring, 0);
 	if (ret < 0) {
 		fprintf(stderr, "queue_init: %s\n", strerror(-ret));
 		return 1;
 	}
 
+        /*
+         * 打开一个文件
+         * */
 	fd = open(argv[1], O_RDONLY | O_DIRECT);
 	if (fd < 0) {
 		perror("open");
 		return 1;
 	}
-
+        /*
+         * 获取文件状态信息
+         * */
 	if (fstat(fd, &sb) < 0) {
 		perror("fstat");
 		return 1;
 	}
 
 	fsize = 0;
+        /*
+        * 在内存的动态存储区中分配QD个长度为sizeof(struct iovec)的连续空间，函数返回一个指向分配起始地址的指针；如果分配不成功，返回NULL。
+        * */
 	iovecs = calloc(QD, sizeof(struct iovec));
 	for (i = 0; i < QD; i++) {
+                /*
+                 * 函数posix_memalign()分配大小字节，并将分配的内存地址放在* memptr中。
+                 * 分配的内存地址将是对齐方式的倍数，必须是2的幂和sizeof(void *)的倍数。
+                 * 如果size为0，则* memptr中的值要么为NULL，要么为唯一的指针值，以后可以成功将其传递给free(3)。
+                 * posix_memalign()成功返回零
+                 * */
 		if (posix_memalign(&buf, 4096, 4096))
 			return 1;
 		iovecs[i].iov_base = buf;
@@ -63,16 +83,27 @@ int main(int argc, char *argv[])
 	offset = 0;
 	i = 0;
 	do {
+                /*
+                 * io_uring_get_sqe 获取 sqe 结构
+                 * 一个 sqe（submission queue entry）代表一次 IO 请求，占用循环队列一个空位。
+                 * io_uring 队列满时 io_uring_get_sqe 会返回 NULL，注意错误处理。
+                 * */
 		sqe = io_uring_get_sqe(&ring);
 		if (!sqe)
 			break;
+                /*
+                 * 初始化 sqe 结构
+                 * */
 		io_uring_prep_readv(sqe, fd, &iovecs[i], 1, offset);
 		offset += iovecs[i].iov_len;
 		i++;
 		if (offset > sb.st_size)
 			break;
 	} while (1);
-
+        /*
+         * 准备好 sqe 后即可使用 io_uring_submit 提交请求。
+         * 可以一次性初始化多个 sqe 然后一次性 submit。
+         * */
 	ret = io_uring_submit(&ring);
 	if (ret < 0) {
 		fprintf(stderr, "io_uring_submit: %s\n", strerror(-ret));
@@ -86,6 +117,9 @@ int main(int argc, char *argv[])
 	pending = ret;
 	fsize = 0;
 	for (i = 0; i < pending; i++) {
+                /*
+                 * 获取当前已完成的 IO 操作。会阻塞线程，等待 IO 操作完成。
+                 * */
 		ret = io_uring_wait_cqe(&ring, &cqe);
 		if (ret < 0) {
 			fprintf(stderr, "io_uring_wait_cqe: %s\n", strerror(-ret));
@@ -99,6 +133,9 @@ int main(int argc, char *argv[])
 			ret = 1;
 		}
 		fsize += cqe->res;
+                /*
+                 * 默认情况下 IO 完成事件不会从队列中清除，导致 io_uring_peek_cqe 会获取到相同事件，使用 io_uring_cqe_seen 标记该事件已被处理
+                 * */
 		io_uring_cqe_seen(&ring, cqe);
 		if (ret)
 			break;
@@ -107,6 +144,9 @@ int main(int argc, char *argv[])
 	printf("Submitted=%d, completed=%d, bytes=%lu\n", pending, done,
 						(unsigned long) fsize);
 	close(fd);
+        /*
+         * 清除 io_uring 结构
+         * */
 	io_uring_queue_exit(&ring);
 	return 0;
 }
