@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
                  * iovecs 为 iovec 数组，具体使用请参照 readv 和 writev，
                  * nr_vecs 为 iovecs 数组元素个数，
                  * offset 为文件操作的偏移量。
+                 * 1代表io_uring_sqe struct中的len (buffer size or number of iovecs)
                  * */
 		io_uring_prep_readv(sqe, fd, &iovecs[i], 1, offset);
 		offset += iovecs[i].iov_len;
