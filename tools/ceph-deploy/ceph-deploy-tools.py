@@ -58,3 +58,9 @@ def main(filename, *argv):
 
 if __name__ == '__main__':
   sys.exit(main(*sys.argv))
+
+#提高recovery速度（超速）
+# ceph tell osd.* injectargs '--osd_max_backfills 50'
+# ceph tell osd.* injectargs '--osd_recovery_max_active 50'
+# ceph tell osd.* injectargs '--osd_recovery_sleep_hdd 0.0'
+# ceph tell osd.* injectargs '--osd_recovery_sleep_ssd 0.0'
